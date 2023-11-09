@@ -24,7 +24,10 @@ namespace MonsterDrops
             mls = BepInEx.Logging.Logger.CreateLogSource("Monster Drops");
             // Plugin startup logic
             mls.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
-            _harmony.PatchAll();
+            _harmony.PatchAll(typeof(Plugin));
+
+            var helperObject = new GameObject("CoroutineHelper");
+            helperObject.AddComponent<CoroutineHelper>();
         }
 
         public void DelayedSyncScrapValues(Action action, float delay)
@@ -52,6 +55,12 @@ namespace MonsterDrops
             }
             else
             {
+                // Create the CoroutineHelper object if it doesn't exist
+                if (CoroutineHelper.Instance == null)
+                {
+                    var helperObject = new GameObject("CoroutineHelper");
+                    helperObject.AddComponent<CoroutineHelper>();
+                }
 
                 // Get the list of spawnable scrap items
                 List<SpawnableItemWithRarity> spawnableScrapItems = roundManager.currentLevel.spawnableScrap;
@@ -81,30 +90,11 @@ namespace MonsterDrops
                     networkArray[0] = component2;
                     intArray[0] = component.scrapValue;
 
-                    // Define the action to perform after the delay
-                    Action syncScrapAction = () =>
+                    CoroutineHelper.Instance.ExecuteAfterDelay(() =>
                     {
-                        RoundManager roundManager2 = GameObject.FindObjectOfType<RoundManager>();
-                        if (roundManager2 != null)
-                        {
-                            roundManager2.SyncScrapValuesClientRpc(networkArray, intArray);
-                        }
-                        else
-                        {
-                            mls.LogWarning("RoundManager instance not found in the scene!");
-                        }
-                    };
-
-                    // Use the instance of the Plugin class to start the coroutine
-                    Plugin instance = GameObject.FindObjectOfType<Plugin>();
-                    if (instance != null)
-                    {
-                        instance.DelayedSyncScrapValues(syncScrapAction, 11f);
-                    }
-                    else
-                    {
-                        mls.LogWarning("MonsterDropsPlugin instance not found in the scene!");
-                    }
+                        // The function you want to call after 11 seconds
+                        roundManager.SyncScrapValuesClientRpc(networkArray, intArray);
+                    }, 11f);
 
                 }
             }
@@ -113,4 +103,35 @@ namespace MonsterDrops
 
 
     }
+
+    public class CoroutineHelper : MonoBehaviour
+    {
+        public static CoroutineHelper Instance { get; private set; }
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(this.gameObject);
+            }
+            else
+            {
+                Destroy(this.gameObject);
+            }
+        }
+
+        public void ExecuteAfterDelay(Action action, float delay)
+        {
+            StartCoroutine(DelayedExecution(action, delay));
+        }
+
+        private IEnumerator DelayedExecution(Action action, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            action.Invoke();
+        }
+    }
+
+
 }
