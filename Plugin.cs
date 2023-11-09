@@ -26,7 +26,7 @@ namespace MonsterDrops
             mls.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
             _harmony.PatchAll();
         }
-        
+
         public void DelayedSyncScrapValues(Action action, float delay)
         {
             StartCoroutine(DelayedActionCoroutine(action, delay));
@@ -37,9 +37,9 @@ namespace MonsterDrops
             yield return new WaitForSeconds(delay);
             action();
         }
-        
-        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.KillEnemy))]
+
         [HarmonyPostfix]
+        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.KillEnemy))]
         static void DropLoot(EnemyAI __instance)
         {
             mls.LogInfo($"Enemy {__instance.name} has been killed. Spawning scrap...");
@@ -49,7 +49,8 @@ namespace MonsterDrops
             if (roundManager == null)
             {
                 mls.LogWarning("RoundManager instance not found in the scene!");
-            }  else
+            }
+            else
             {
 
                 // Get the list of spawnable scrap items
@@ -58,7 +59,7 @@ namespace MonsterDrops
                 if (spawnableScrapItems == null || spawnableScrapItems.Count == 0)
                 { // Get the list of spawnable scrap items
                     mls.LogWarning("No scrap items are configured to spawn.");
-                } 
+                }
                 else
                 {
                     // Get a random scrap item from the list of spawnable scrap items
